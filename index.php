@@ -1,4 +1,77 @@
-<?php define('SHOW_PRELOADER', false); ?>
+<?php
+// Database connection for dynamic content
+session_start();
+define('SHOW_PRELOADER', false);
+
+$host = 'localhost';
+$dbname = 'Sapphireweb';
+$username = 'root';
+$password = '';
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch(PDOException $e) {
+    // Fallback to default content if database fails
+    error_log("Database connection failed: " . $e->getMessage());
+}
+
+// Get dynamic content
+$content = [];
+$stats = [];
+$collaborators = [];
+$tires = [];
+$stories = [];
+
+if (isset($pdo)) {
+    // Get text content
+    $stmt = $pdo->query("SELECT * FROM site_content");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $content[$row['section']] = $row['content'];
+    }
+    
+    // Get stats
+    $stmt = $pdo->query("SELECT * FROM site_stats");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $stats[$row['stat_key']] = $row;
+    }
+    
+    // Get collaborators
+    $collaborators = $pdo->query("SELECT * FROM collaborators WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get tires
+    $tires = $pdo->query("SELECT * FROM tires WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get rider stories
+    $stories = $pdo->query("SELECT * FROM rider_stories WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Default values for stats
+$defaultStats = [
+    'years' => ['stat_value' => '21', 'stat_label' => 'Years Experience'],
+    'models' => ['stat_value' => '25', 'stat_label' => 'Tire Models'],
+    'riders' => ['stat_value' => '1000K', 'stat_label' => 'Happy Riders']
+];
+
+// Merge with defaults if not set
+foreach ($defaultStats as $key => $default) {
+    if (!isset($stats[$key])) {
+        $stats[$key] = $default;
+    }
+}
+
+// Helper function to get content with default
+function getContent($key, $default = '') {
+    global $content;
+    return isset($content[$key]) ? htmlspecialchars($content[$key]) : $default;
+}
+
+// Helper function to get video path
+function getVideoPath($default = 'assets/images/BKasambuhay-Video.mp4') {
+    global $content;
+    return isset($content['hero_video']) ? htmlspecialchars($content['hero_video']) : $default;
+}
+?>
 <?php include 'header.php'; ?>
 
 
@@ -72,7 +145,7 @@
     top: 0; left: 0;
     width: 100%; height: 100%;
     background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
-                url('assets/images/BKasambuhay-Video.mp4') top/cover no-repeat;
+                url('<?php echo getVideoPath(); ?>') top/cover no-repeat;
     z-index: 0;
     display: none; /* hidden by default; shown via JS if video fails */
 }
@@ -829,7 +902,7 @@ body {
             preload="auto"
             poster="assets/images/sapphire-background.jpg"
         >
-            <source src="assets/images/BKasambuhay-Video.mp4" type="video/mp4">
+            <source src="<?php echo getVideoPath(); ?>" type="video/mp4">
         </video>
     </div>
 
@@ -925,30 +998,30 @@ body {
 <!-- COMPANY OVERVIEW -->
 <section class="overview-split-section" data-animate="fade-up">
     <div class="overview-section-heading">
-        <span class="overview-section-eyebrow">Who We Are</span>
-        <h2 class="overview-section-title">COMPANY OVERVIEW</h2>
-        <p class="overview-section-tagline">Kasama mo sa Hanapbuhay &mdash; Philippine Made</p>
+        <span class="overview-section-eyebrow"><?php echo getContent('overview_eyebrow', 'Who We Are'); ?></span>
+        <h2 class="overview-section-title"><?php echo getContent('overview_title', 'COMPANY OVERVIEW'); ?></h2>
+        <p class="overview-section-tagline"><?php echo getContent('overview_tagline', 'Kasama mo sa Hanapbuhay &mdash; Philippine Made'); ?></p>
         <div class="overview-stats-bar">
             <div class="ov-stat-item">
-                <div class="ov-stat-number">21</div>
-                <div class="ov-stat-label">Years Experience</div>
+                <div class="ov-stat-number"><?php echo $stats['years']['stat_value']; ?><?php if($stats['years']['stat_value'] == '1000K') echo '<span style="font-size:1.4rem">+</span>'; ?></div>
+                <div class="ov-stat-label"><?php echo $stats['years']['stat_label']; ?></div>
             </div>
             <div class="ov-stat-divider"></div>
             <div class="ov-stat-item">
-                <div class="ov-stat-number">25</div>
-                <div class="ov-stat-label">Tire Models</div>
+                <div class="ov-stat-number"><?php echo $stats['models']['stat_value']; ?></div>
+                <div class="ov-stat-label"><?php echo $stats['models']['stat_label']; ?></div>
             </div>
             <div class="ov-stat-divider"></div>
             <div class="ov-stat-item">
-                <div class="ov-stat-number">1000K<span style="font-size:1.4rem">+</span></div>
-                <div class="ov-stat-label">Happy Riders</div>
+                <div class="ov-stat-number"><?php echo $stats['riders']['stat_value']; ?><?php if($stats['riders']['stat_value'] == '1000K') echo '<span style="font-size:1.4rem">+</span>'; ?></div>
+                <div class="ov-stat-label"><?php echo $stats['riders']['stat_label']; ?></div>
             </div>
         </div>
     </div>
 
     <div class="ov-row" data-animate="fade-up" data-delay="100">
         <div class="ov-title-zone">
-            <h2 class="ov-big-title">Quality<br>First</h2>
+            <h2 class="ov-big-title"><?php echo getContent('quality_title', 'Quality<br>First'); ?></h2>
             <div class="ov-underline"></div>
         </div>
         <div class="ov-circle-zone">
@@ -960,15 +1033,15 @@ body {
             </div>
         </div>
         <div class="ov-card-zone">
-            <div class="ov-card-stat">15+ Years of Excellence</div>
-            <h5>Our Commitment</h5>
-            <p>Sapphire Tire is committed to delivering high-quality, durable, and reliable tires designed for everyday riders and professionals. Our dedication to quality has made us a trusted name in the motorcycle tire industry.</p>
+            <div class="ov-card-stat"><?php echo getContent('quality_stat', '15+ Years of Excellence'); ?></div>
+            <h5><?php echo getContent('quality_heading', 'Our Commitment'); ?></h5>
+            <p><?php echo getContent('quality_text', 'Sapphire Tire is committed to delivering high-quality, durable, and reliable tires designed for everyday riders and professionals. Our dedication to quality has made us a trusted name in the motorcycle tire industry.'); ?></p>
         </div>
     </div>
 
     <div class="ov-row ov-reversed" data-animate="fade-up" data-delay="200">
         <div class="ov-title-zone">
-            <h2 class="ov-big-title">Rider<br>Focused</h2>
+            <h2 class="ov-big-title"><?php echo getContent('rider_title', 'Rider<br>Focused'); ?></h2>
             <div class="ov-underline"></div>
         </div>
         <div class="ov-circle-zone">
@@ -982,9 +1055,9 @@ body {
             </div>
         </div>
         <div class="ov-card-zone">
-            <div class="ov-card-stat">1,000K+ Satisfied Riders</div>
-            <h5>Our Philosophy</h5>
-            <p>We understand the needs of Filipino riders. From daily commuters to adventure enthusiasts, our tires are designed to deliver performance, safety, and confidence on every journey.</p>
+            <div class="ov-card-stat"><?php echo getContent('rider_stat', '1,000K+ Satisfied Riders'); ?></div>
+            <h5><?php echo getContent('rider_heading', 'Our Philosophy'); ?></h5>
+            <p><?php echo getContent('rider_text', 'We understand the needs of Filipino riders. From daily commuters to adventure enthusiasts, our tires are designed to deliver performance, safety, and confidence on every journey.'); ?></p>
         </div>
     </div>
 </section>
@@ -993,31 +1066,54 @@ body {
 <section class="py-5 collaborators-section" data-animate="fade-up">
     <div class="container">
         <div class="text-center mb-5" style="margin-bottom: 40px !important;">
-            <span class="overview-section-eyebrow">Our Partners</span>
-            <h2 class="overview-section-title" style="margin-bottom: 0;">COLLABORATORS</h2>
-            <p class="overview-section-tagline">Kasama mo sa Hanapbuhay — Trusted Partners</p>
+            <span class="overview-section-eyebrow"><?php echo getContent('collab_eyebrow', 'Our Partners'); ?></span>
+            <h2 class="overview-section-title" style="margin-bottom: 0;"><?php echo getContent('collab_title', 'COLLABORATORS'); ?></h2>
+            <p class="overview-section-tagline"><?php echo getContent('collab_tagline', 'Kasama mo sa Hanapbuhay — Trusted Partners'); ?></p>
         </div>
         <div class="collaborators-horizontal-container">
             <div class="collaborators-horizontal-track">
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Lodi-Lia.jpg" alt="Lodi-Lia"><div class="collaborator-card-content"><h4>Lodi Lia</h4><p>Rider & Influencer</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Zurc-Moto.jpg" alt="Zurc-Moto"><div class="collaborator-card-content"><h4>Zurc Moto</h4><p>Motorcycle Enthusiast</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Sunshine-Effy.jpg" alt="Sunshine-Effy"><div class="collaborator-card-content"><h4>Sunshine Effy</h4><p>Adventure Rider</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Don-Nelson.jpg" alt="Don-Nelson"><div class="collaborator-card-content"><h4>Don Nelson</h4><p>Motovlogger</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Elmer-Pakingan.jpg" alt="Elmer Pakingan"><div class="collaborator-card-content"><h4>Elmer Pakingan</h4><p>Professional Rider</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/AZIZAH.jpg" alt="AZIZAH"><div class="collaborator-card-content"><h4>AZIZAH</h4><p>Motorcycle Club Member</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Ayee-Lakwatsera.jpg" alt="Ayee Lakwatsera"><div class="collaborator-card-content"><h4>Ayee Lakwatsera</h4><p>Travel Rider</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX125-ANGEL.jpg" alt="TMX125-ANGEL"><div class="collaborator-card-content"><h4>TMX125 Angel</h4><p>Custom Bike Builder</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX155-PAMPANG.jpg" alt="TMX155-PAMPANG"><div class="collaborator-card-content"><h4>TMX155 Pampang</h4><p>Racing Enthusiast</p></div></div>
-                <!-- Duplicate for seamless loop -->
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Lodi-Lia.jpg" alt="Lodi-Lia"><div class="collaborator-card-content"><h4>Lodi Lia</h4><p>Rider & Influencer</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Zurc-Moto.jpg" alt="Zurc-Moto"><div class="collaborator-card-content"><h4>Zurc Moto</h4><p>Motorcycle Enthusiast</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Sunshine-Effy.jpg" alt="Sunshine-Effy"><div class="collaborator-card-content"><h4>Sunshine Effy</h4><p>Adventure Rider</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Don-Nelson.jpg" alt="Don-Nelson"><div class="collaborator-card-content"><h4>Don Nelson</h4><p>Motovlogger</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Elmer-Pakingan.jpg" alt="Elmer Pakingan"><div class="collaborator-card-content"><h4>Elmer Pakingan</h4><p>Professional Rider</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/AZIZAH.jpg" alt="AZIZAH"><div class="collaborator-card-content"><h4>AZIZAH</h4><p>Motorcycle Club Member</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Ayee-Lakwatsera.jpg" alt="Ayee Lakwatsera"><div class="collaborator-card-content"><h4>Ayee Lakwatsera</h4><p>Travel Rider</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX125-ANGEL.jpg" alt="TMX125-ANGEL"><div class="collaborator-card-content"><h4>TMX125 Angel</h4><p>Custom Bike Builder</p></div></div>
-                <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX155-PAMPANG.jpg" alt="TMX155-PAMPANG"><div class="collaborator-card-content"><h4>TMX155 Pampang</h4><p>Racing Enthusiast</p></div></div>
+                <?php if (!empty($collaborators)): ?>
+                    <?php foreach ($collaborators as $collab): ?>
+                        <div class="collaborator-horizontal-card">
+                            <img src="<?php echo htmlspecialchars($collab['image']); ?>" alt="<?php echo htmlspecialchars($collab['name']); ?>">
+                            <div class="collaborator-card-content">
+                                <h4><?php echo htmlspecialchars($collab['name']); ?></h4>
+                                <p><?php echo htmlspecialchars($collab['title']); ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                    <!-- Duplicate for seamless loop -->
+                    <?php foreach ($collaborators as $collab): ?>
+                        <div class="collaborator-horizontal-card">
+                            <img src="<?php echo htmlspecialchars($collab['image']); ?>" alt="<?php echo htmlspecialchars($collab['name']); ?>">
+                            <div class="collaborator-card-content">
+                                <h4><?php echo htmlspecialchars($collab['name']); ?></h4>
+                                <p><?php echo htmlspecialchars($collab['title']); ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <!-- Default collaborators if none in database -->
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Lodi-Lia.jpg" alt="Lodi-Lia"><div class="collaborator-card-content"><h4>Lodi Lia</h4><p>Rider & Influencer</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Zurc-Moto.jpg" alt="Zurc-Moto"><div class="collaborator-card-content"><h4>Zurc Moto</h4><p>Motorcycle Enthusiast</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Sunshine-Effy.jpg" alt="Sunshine-Effy"><div class="collaborator-card-content"><h4>Sunshine Effy</h4><p>Adventure Rider</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Don-Nelson.jpg" alt="Don-Nelson"><div class="collaborator-card-content"><h4>Don Nelson</h4><p>Motovlogger</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Elmer-Pakingan.jpg" alt="Elmer Pakingan"><div class="collaborator-card-content"><h4>Elmer Pakingan</h4><p>Professional Rider</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/AZIZAH.jpg" alt="AZIZAH"><div class="collaborator-card-content"><h4>AZIZAH</h4><p>Motorcycle Club Member</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Ayee-Lakwatsera.jpg" alt="Ayee Lakwatsera"><div class="collaborator-card-content"><h4>Ayee Lakwatsera</h4><p>Travel Rider</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX125-ANGEL.jpg" alt="TMX125-ANGEL"><div class="collaborator-card-content"><h4>TMX125 Angel</h4><p>Custom Bike Builder</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX155-PAMPANG.jpg" alt="TMX155-PAMPANG"><div class="collaborator-card-content"><h4>TMX155 Pampang</h4><p>Racing Enthusiast</p></div></div>
+                    <!-- Duplicate for seamless loop -->
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Lodi-Lia.jpg" alt="Lodi-Lia"><div class="collaborator-card-content"><h4>Lodi Lia</h4><p>Rider & Influencer</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Zurc-Moto.jpg" alt="Zurc-Moto"><div class="collaborator-card-content"><h4>Zurc Moto</h4><p>Motorcycle Enthusiast</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Sunshine-Effy.jpg" alt="Sunshine-Effy"><div class="collaborator-card-content"><h4>Sunshine Effy</h4><p>Adventure Rider</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Don-Nelson.jpg" alt="Don-Nelson"><div class="collaborator-card-content"><h4>Don Nelson</h4><p>Motovlogger</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Elmer-Pakingan.jpg" alt="Elmer Pakingan"><div class="collaborator-card-content"><h4>Elmer Pakingan</h4><p>Professional Rider</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/AZIZAH.jpg" alt="AZIZAH"><div class="collaborator-card-content"><h4>AZIZAH</h4><p>Motorcycle Club Member</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/Ayee-Lakwatsera.jpg" alt="Ayee Lakwatsera"><div class="collaborator-card-content"><h4>Ayee Lakwatsera</h4><p>Travel Rider</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX125-ANGEL.jpg" alt="TMX125-ANGEL"><div class="collaborator-card-content"><h4>TMX125 Angel</h4><p>Custom Bike Builder</p></div></div>
+                    <div class="collaborator-horizontal-card"><img src="assets/images/collaborators/TMX155-PAMPANG.jpg" alt="TMX155-PAMPANG"><div class="collaborator-card-content"><h4>TMX155 Pampang</h4><p>Racing Enthusiast</p></div></div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -1027,9 +1123,9 @@ body {
 <section class="bst-section" id="bestSellingSection">
     <div class="container-fluid px-4 px-md-5">
         <div class="text-center mb-5" style="margin-bottom: 40px !important;">
-            <span class="overview-section-eyebrow">Top Picks</span>
-            <h2 class="overview-section-title" style="margin-bottom: 0;">BEST SELLING TIRES</h2>
-            <p class="overview-section-tagline">Most trusted by Filipino riders</p>
+            <span class="overview-section-eyebrow"><?php echo getContent('bst_eyebrow', 'Top Picks'); ?></span>
+            <h2 class="overview-section-title" style="margin-bottom: 0;"><?php echo getContent('bst_title', 'BEST SELLING TIRES'); ?></h2>
+            <p class="overview-section-tagline"><?php echo getContent('bst_tagline', 'Most trusted by Filipino riders'); ?></p>
         </div>
         
         <div class="bst-layout">
@@ -1046,54 +1142,89 @@ body {
                 </div>
             </div>
             <div class="bst-cards-col" id="bstCardsCol">
-                <div class="bst-card" data-index="0" onclick="bstSelect(0)">
-                    <div class="bst-card-thumb"><img src="assets/images/E716 edited.png" alt="HI-MILLER E716"></div>
-                    <div class="bst-card-info">
-                        <div class="bst-card-tag">Motocross</div>
-                        <div class="bst-card-name">HI-MILLER E716</div>
-                        <div class="bst-card-hint">Off-road dominance with aggressive knob pattern</div>
+                <?php if (!empty($tires)): ?>
+                    <?php foreach ($tires as $index => $tire): ?>
+                    <div class="bst-card" data-index="<?php echo $index; ?>" onclick="bstSelect(<?php echo $index; ?>)">
+                        <div class="bst-card-thumb"><img src="<?php echo htmlspecialchars($tire['image']); ?>" alt="<?php echo htmlspecialchars($tire['name']); ?>"></div>
+                        <div class="bst-card-info">
+                            <div class="bst-card-tag"><?php echo htmlspecialchars($tire['tag']); ?></div>
+                            <div class="bst-card-name"><?php echo htmlspecialchars($tire['name']); ?></div>
+                            <div class="bst-card-hint"><?php echo substr(htmlspecialchars($tire['description']), 0, 50) . '...'; ?></div>
+                        </div>
+                        <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
                     </div>
-                    <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
-                </div>
-                <div class="bst-card" data-index="1" onclick="bstSelect(1)">
-                    <div class="bst-card-thumb"><img src="assets/images/E708 edited.png" alt="SPORTS E708"></div>
-                    <div class="bst-card-info">
-                        <div class="bst-card-tag">On/Off-Road · Dual</div>
-                        <div class="bst-card-name">SPORTS E708</div>
-                        <div class="bst-card-hint">Versatile dual-purpose performance tire</div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <!-- Default tires if none in database -->
+                    <div class="bst-card" data-index="0" onclick="bstSelect(0)">
+                        <div class="bst-card-thumb"><img src="assets/images/E716 edited.png" alt="HI-MILLER E716"></div>
+                        <div class="bst-card-info">
+                            <div class="bst-card-tag">Motocross</div>
+                            <div class="bst-card-name">HI-MILLER E716</div>
+                            <div class="bst-card-hint">Off-road dominance with aggressive knob pattern</div>
+                        </div>
+                        <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
                     </div>
-                    <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
-                </div>
-                <div class="bst-card" data-index="2" onclick="bstSelect(2)">
-                    <div class="bst-card-thumb"><img src="assets/images/E707 png.png" alt="STRENGTH E707"></div>
-                    <div class="bst-card-info">
-                        <div class="bst-card-tag">On-Road · High Speed</div>
-                        <div class="bst-card-name">STRENGTH E707</div>
-                        <div class="bst-card-hint">High-speed road stability and grip</div>
+                    <div class="bst-card" data-index="1" onclick="bstSelect(1)">
+                        <div class="bst-card-thumb"><img src="assets/images/E708 edited.png" alt="SPORTS E708"></div>
+                        <div class="bst-card-info">
+                            <div class="bst-card-tag">On/Off-Road · Dual</div>
+                            <div class="bst-card-name">SPORTS E708</div>
+                            <div class="bst-card-hint">Versatile dual-purpose performance tire</div>
+                        </div>
+                        <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
                     </div>
-                    <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
-                </div>
-                <div class="bst-card" data-index="3" onclick="bstSelect(3)">
-                    <div class="bst-card-thumb"><img src="assets/images/E701 edited.png" alt="EXTREME PERFORMANCE E701"></div>
-                    <div class="bst-card-info">
-                        <div class="bst-card-tag">Heavy Duty Tricycle</div>
-                        <div class="bst-card-name">EXTREME PERFORMANCE E701</div>
-                        <div class="bst-card-hint">Built tough for commercial tricycle loads</div>
+                    <div class="bst-card" data-index="2" onclick="bstSelect(2)">
+                        <div class="bst-card-thumb"><img src="assets/images/E707 png.png" alt="STRENGTH E707"></div>
+                        <div class="bst-card-info">
+                            <div class="bst-card-tag">On-Road · High Speed</div>
+                            <div class="bst-card-name">STRENGTH E707</div>
+                            <div class="bst-card-hint">High-speed road stability and grip</div>
+                        </div>
+                        <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
                     </div>
-                    <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
-                </div>
+                    <div class="bst-card" data-index="3" onclick="bstSelect(3)">
+                        <div class="bst-card-thumb"><img src="assets/images/E701 edited.png" alt="EXTREME PERFORMANCE E701"></div>
+                        <div class="bst-card-info">
+                            <div class="bst-card-tag">Heavy Duty Tricycle</div>
+                            <div class="bst-card-name">EXTREME PERFORMANCE E701</div>
+                            <div class="bst-card-hint">Built tough for commercial tricycle loads</div>
+                        </div>
+                        <div class="bst-card-arrow"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
 </section>
 
 <script>
-const bstData = [
-    { name: 'HI-MILLER E716', tag: 'Motocross', img: 'assets/images/E716 edited.png', desc: 'Engineered for the toughest off-road conditions, the HI-MILLER E716 features an aggressive knob pattern that delivers superior mud traction and stability on loose terrain. Ideal for motocross riders who demand peak performance.', sizes: ['2.50-17', '2.75-17', '3.00-17', '2.50-18', '2.75-18', '3.00-18'] },
-    { name: 'SPORTS E708', tag: 'On/Off-Road · Dual', img: 'assets/images/E708 edited.png', desc: 'The versatile SPORTS E708 transitions seamlessly between tarmac and trail. A dual-purpose tread pattern ensures confident handling on paved roads while retaining off-road capability for weekend adventures.', sizes: ['2.50-17', '2.75-17', '3.00-17', '2.75-18', '3.00-18', '3.25-18'] },
-    { name: 'STRENGTH E707', tag: 'On-Road · High Speed', img: 'assets/images/E707 png.png', desc: 'Designed for the fast lane, the STRENGTH E707 offers a smooth center rib for straight-line stability and optimized shoulder blocks for confident cornering. Perfect for daily commuters and highway cruisers.', sizes: ['2.50-17', '2.75-17', '3.00-17', '3.50-17', '2.75-18', '3.00-18', '3.50-18'] },
-    { name: 'EXTREME PERFORMANCE E701', tag: 'Heavy Duty Tricycle', img: 'assets/images/E701 edited.png', desc: 'Built to handle the demands of commercial tricycle operations, the E701 features a reinforced carcass for heavy load capacity and a wide tread for maximum contact patch and durability under constant use.', sizes: ['4.00-8', '4.50-10', '5.00-10', '6.00-12', '3.50-8'] }
-];
+const bstData = <?php 
+    if (!empty($tires)) {
+        $data = [];
+        foreach ($tires as $tire) {
+            $sizes = json_decode($tire['sizes'], true);
+            if (!is_array($sizes)) {
+                $sizes = ['2.50-17', '2.75-17', '3.00-17'];
+            }
+            $data[] = [
+                'name' => $tire['name'],
+                'tag' => $tire['tag'],
+                'img' => $tire['image'],
+                'desc' => $tire['description'],
+                'sizes' => $sizes
+            ];
+        }
+        echo json_encode($data);
+    } else {
+        echo json_encode([
+            ['name' => 'HI-MILLER E716', 'tag' => 'Motocross', 'img' => 'assets/images/E716 edited.png', 'desc' => 'Engineered for the toughest off-road conditions, the HI-MILLER E716 features an aggressive knob pattern that delivers superior mud traction and stability on loose terrain. Ideal for motocross riders who demand peak performance.', 'sizes' => ['2.50-17', '2.75-17', '3.00-17', '2.50-18', '2.75-18', '3.00-18']],
+            ['name' => 'SPORTS E708', 'tag' => 'On/Off-Road · Dual', 'img' => 'assets/images/E708 edited.png', 'desc' => 'The versatile SPORTS E708 transitions seamlessly between tarmac and trail. A dual-purpose tread pattern ensures confident handling on paved roads while retaining off-road capability for weekend adventures.', 'sizes' => ['2.50-17', '2.75-17', '3.00-17', '2.75-18', '3.00-18', '3.25-18']],
+            ['name' => 'STRENGTH E707', 'tag' => 'On-Road · High Speed', 'img' => 'assets/images/E707 png.png', 'desc' => 'Designed for the fast lane, the STRENGTH E707 offers a smooth center rib for straight-line stability and optimized shoulder blocks for confident cornering. Perfect for daily commuters and highway cruisers.', 'sizes' => ['2.50-17', '2.75-17', '3.00-17', '3.50-17', '2.75-18', '3.00-18', '3.50-18']],
+            ['name' => 'EXTREME PERFORMANCE E701', 'tag' => 'Heavy Duty Tricycle', 'img' => 'assets/images/E701 edited.png', 'desc' => 'Built to handle the demands of commercial tricycle operations, the E701 features a reinforced carcass for heavy load capacity and a wide tread for maximum contact patch and durability under constant use.', 'sizes' => ['4.00-8', '4.50-10', '5.00-10', '6.00-12', '3.50-8']]
+        ]);
+    }
+?>;
 let bstActive = -1;
 function bstSelect(index) {
     if (bstActive === index) return;
@@ -1117,78 +1248,116 @@ document.addEventListener('DOMContentLoaded', () => bstSelect(0));
     <div class="container">
         <div class="rider-stories-layout">
             <div class="rider-stories-header" data-animate="slide-in-left" data-delay="100">
-                <span class="section-eyebrow">Rider Stories</span>
-                <h3 class="section-title">BIDA & KWENTO</h3>
-                <p class="section-sub">Discover the inspiring journeys of riders who trust Sapphire Tire for their adventures.</p>
+                <span class="section-eyebrow"><?php echo getContent('stories_eyebrow', 'Rider Stories'); ?></span>
+                <h3 class="section-title"><?php echo getContent('stories_title', 'BIDA & KWENTO'); ?></h3>
+                <p class="section-sub"><?php echo getContent('stories_subtitle', 'Discover the inspiring journeys of riders who trust Sapphire Tire for their adventures.'); ?></p>
                 <div class="header-underline"></div>
             </div>
 
             <div class="rider-stories-cards">
-                <div class="story-profile-card" data-animate="fade-up" data-delay="200">
-                    <div class="story-card-img-wrap">
-                        <img src="assets/images/bida.jpg"
-                             onerror="this.style.background='linear-gradient(135deg,#1c3b6e,#0f2044)';this.style.display='block';this.removeAttribute('src')"
-                             alt="Bida Kasambuhay">
-                    </div>
-                    <div class="story-card-body">
-                        <div class="story-card-title-row">
-                            <h5>BIDA KASAMBUHAY</h5>
-                            <span class="story-card-badge">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                            </span>
+                <?php if (!empty($stories)): ?>
+                    <?php foreach ($stories as $story): ?>
+                    <div class="story-profile-card" data-animate="fade-up" data-delay="200">
+                        <div class="story-card-img-wrap">
+                            <img src="<?php echo htmlspecialchars($story['image']); ?>"
+                                 onerror="this.style.background='linear-gradient(135deg,#1c3b6e,#0f2044)';this.style.display='block';this.removeAttribute('src')"
+                                 alt="<?php echo htmlspecialchars($story['title']); ?>">
                         </div>
-                        <p class="story-card-desc">Featured rider stories using Sapphire Tire products.</p>
-                        <div class="story-card-footer">
-                            <div class="story-card-stats">
-                                <div class="story-stat">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                    <span>Riders</span>
-                                </div>
-                                <div class="story-stat">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-                                    <span>Stories</span>
-                                </div>
+                        <div class="story-card-body">
+                            <div class="story-card-title-row">
+                                <h5><?php echo htmlspecialchars($story['title']); ?></h5>
+                                <span class="story-card-badge">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                                </span>
                             </div>
-                            <a href="events.php#blog" class="story-card-cta">
-                                View More
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                            </a>
+                            <p class="story-card-desc"><?php echo htmlspecialchars($story['description']); ?></p>
+                            <div class="story-card-footer">
+                                <div class="story-card-stats">
+                                    <div class="story-stat">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span>Riders</span>
+                                    </div>
+                                    <div class="story-stat">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                                        <span>Stories</span>
+                                    </div>
+                                </div>
+                                <a href="<?php echo htmlspecialchars($story['link']); ?>" class="story-card-cta">
+                                    View More
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <!-- Default stories if none in database -->
+                    <div class="story-profile-card" data-animate="fade-up" data-delay="200">
+                        <div class="story-card-img-wrap">
+                            <img src="assets/images/bida.jpg"
+                                 onerror="this.style.background='linear-gradient(135deg,#1c3b6e,#0f2044)';this.style.display='block';this.removeAttribute('src')"
+                                 alt="Bida Kasambuhay">
+                        </div>
+                        <div class="story-card-body">
+                            <div class="story-card-title-row">
+                                <h5>BIDA KASAMBUHAY</h5>
+                                <span class="story-card-badge">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                            </div>
+                            <p class="story-card-desc">Featured rider stories using Sapphire Tire products.</p>
+                            <div class="story-card-footer">
+                                <div class="story-card-stats">
+                                    <div class="story-stat">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span>Riders</span>
+                                    </div>
+                                    <div class="story-stat">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                                        <span>Stories</span>
+                                    </div>
+                                </div>
+                                <a href="events.php#blog" class="story-card-cta">
+                                    View More
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="story-profile-card" data-animate="fade-up" data-delay="300">
-                    <div class="story-card-img-wrap">
-                        <img src="assets/images/kwento.jpg"
-                             onerror="this.style.background='linear-gradient(135deg,#0f2044,#1c3b6e)';this.style.display='block';this.removeAttribute('src')"
-                             alt="Kwentong Kasambuhay">
-                    </div>
-                    <div class="story-card-body">
-                        <div class="story-card-title-row">
-                            <h5>KWENTONG KASAMBUHAY</h5>
-                            <span class="story-card-badge">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                            </span>
+                    <div class="story-profile-card" data-animate="fade-up" data-delay="300">
+                        <div class="story-card-img-wrap">
+                            <img src="assets/images/kwento.jpg"
+                                 onerror="this.style.background='linear-gradient(135deg,#0f2044,#1c3b6e)';this.style.display='block';this.removeAttribute('src')"
+                                 alt="Kwentong Kasambuhay">
                         </div>
-                        <p class="story-card-desc">Inspirational journeys of riders powered by Sapphire Tire.</p>
-                        <div class="story-card-footer">
-                            <div class="story-card-stats">
-                                <div class="story-stat">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                    <span>Riders</span>
-                                </div>
-                                <div class="story-stat">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-                                    <span>Stories</span>
-                                </div>
+                        <div class="story-card-body">
+                            <div class="story-card-title-row">
+                                <h5>KWENTONG KASAMBUHAY</h5>
+                                <span class="story-card-badge">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                                </span>
                             </div>
-                            <a href="events.php#blog" class="story-card-cta">
-                                View More
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                            </a>
+                            <p class="story-card-desc">Inspirational journeys of riders powered by Sapphire Tire.</p>
+                            <div class="story-card-footer">
+                                <div class="story-card-stats">
+                                    <div class="story-stat">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                        <span>Riders</span>
+                                    </div>
+                                    <div class="story-stat">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                                        <span>Stories</span>
+                                    </div>
+                                </div>
+                                <a href="events.php#blog" class="story-card-cta">
+                                    View More
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
